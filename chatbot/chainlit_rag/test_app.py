@@ -81,26 +81,29 @@
 # texts = text_splitter.create_documents([state_of_the_union])
 # print(texts)
 
-from sentence_transformers import SentenceTransformer , util
-import numpy as np
+# from sentence_transformers import SentenceTransformer , util
+# import numpy as np
 
-model = SentenceTransformer('sentence-transformers/all-mpnet-base-v2')
+# model = SentenceTransformer('sentence-transformers/all-mpnet-base-v2')
 
 
-user_input = ["I am going to gym, what do you think will suit me"]
+# user_input = ["I am going to gym, what do you think will suit me"]
 
-sentence_2_compare = ['I want go to virtual fitting room' , 
-                      'Recommend some outfit for me with my request',
-                      'Base on my image, recommend outfit for my clothes',
+# sentence_2_compare = ['I want go to virtual fitting room' , 
+#                       'Recommend some outfit for me with my request',
+#                       'Base on my image, recommend outfit for my clothes',
                       
-                      ""]
+#                       ""]
 
-user_embedding = model.encode (user_input)
-scores = []
-for sentence in sentence_2_compare :
-    sentence_embedding = model.encode (sentence)
-    print ( util.pytorch_cos_sim(user_embedding, sentence_embedding ))
-    scores.append ( util.pytorch_cos_sim(user_embedding, sentence_embedding )[0][0].item() )
+# user_embedding = model.encode (user_input)
+# scores = []
+# for sentence in sentence_2_compare :
+#     sentence_embedding = model.encode (sentence)
+#     print ( util.pytorch_cos_sim(user_embedding, sentence_embedding ))
+#     scores.append ( util.pytorch_cos_sim(user_embedding, sentence_embedding )[0][0].item() )
     
-print (scores)
-print (np.argmax (np.array (scores)) )
+# print (scores)
+# print (np.argmax (np.array (scores)) )
+
+import torch
+print ( torch.cuda.is_available ())
