@@ -23,10 +23,10 @@ import chainlit as cl
 import PyPDF2
 from io import BytesIO
 from getpass import getpass
-#
-
+from langchain.llms.huggingface_pipeline import HuggingFacePipeline
+import torch
 HUGGINGFACEHUB_API_TOKEN = getpass()
-
+from langchain.llms import HuggingFaceTextGenInference
 import os
 from configparser import ConfigParser
 env_config = ConfigParser()
@@ -47,9 +47,6 @@ os.environ["HUGGINGFACEHUB_API_TOKEN"] = api_key
 import io
 from PIL import Image
 from transformers import BlipProcessor, BlipForConditionalGeneration
-# processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-large")
-# model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-large")
-# text_splitter = RecursiveCharacterTextSplitter(chunk_size = 2000,chunk_overlap=100)
 
 text_splitter = CharacterTextSplitter(
     separator="Song",
@@ -66,6 +63,7 @@ text_splitter = CharacterTextSplitter(
 # prompt = ChatPromptTemplate.from_messages(messages)
 # chain_type_kwargs = {"prompt": prompt}
 
+import qdrant_client
 
 from huggingface_hub import login
 access_token_write = "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"
@@ -83,7 +81,7 @@ async def init():
         for line in file:
             texts.append (line)
 
-    print ("length_Text" , len (texts))
+    # print ("length_Text" , len (texts))
     # Create metadata for each chunk
     metadatas = [{"source": f"{i}-pl"} for i in range(len(texts))]
     # Create a Chroma vector store
@@ -91,21 +89,20 @@ async def init():
     # model_id = "BAAI/bge-large-en-v1.5"
     # model_id = "WhereIsAI/UAE-Large-V1"
     embeddings = HuggingFaceBgeEmbeddings(model_name= model_id,model_kwargs = {"device":"cpu"})
-    #
-    bm25_retriever = BM25Retriever.from_texts(texts)
-    bm25_retriever.k=5
-    # Store the embeddings in the user session
     cl.user_session.set("embeddings", embeddings)
+    #
+    # Store the embeddings in the user session
     docsearch = await cl.make_async(Qdrant.from_texts)(
     texts, embeddings,location=":memory:", metadatas=metadatas
     )
     # llm_chain = LLMChain(prompt=prompt, llm=llm)
     #Hybrid Search
+    bm25_retriever = BM25Retriever.from_texts(texts)
+    bm25_retriever.k=5
     qdrant_retriever = docsearch.as_retriever(search_kwargs={"k":5})
     ensemble_retriever = EnsembleRetriever(retrievers=[bm25_retriever,qdrant_retriever],
     weights=[0.5,0.5])
     #Cohere Reranker 
-    #
     compressor = CohereRerank(client=Client(api_key=os.getenv("COHERE_API_KEY")),user_agent='langchain')
     #
     compression_retriever = ContextualCompressionRetriever(base_compressor=compressor,
@@ -113,22 +110,16 @@ async def init():
     )
     # Create a chain that uses the Chroma vector store
     repo_id = 'mistralai/Mixtral-8x7B-Instruct-v0.1'
-    llm = HuggingFaceHub(repo_id=repo_id, model_kwargs={"temperature": 0.2, "max_length": 4096})
+    llm = HuggingFaceHub(repo_id=repo_id, model_kwargs={"temperature": 0.5, "max_length": 5000})
+
     template = (
-            "<s> [INST] You are a music assistant. Use the following user information to recommend suitable song for them [/INST]"
+            "You are a helpful AI music assistant that recommend song for user.Using only song provided, do not make up any song. Give the user genius URL of the song after you recommend "
             "Combine the chat history and follow up question into "
             "a standalone question. Chat History: {chat_history}"
-            "Follow up question: {question}"
+            "Follow up question: {question} "
         )
     prompt = PromptTemplate.from_template(template)
-    # llm_chain = LLMChain(prompt=prompt, llm=llm)
-    # chain = RetrievalQA.from_chain_type(
-    # llm = llm,
-    # chain_type="stuff",
-    # retriever=compression_retriever,
-    # return_source_documents=True,
-    # )
-    
+    print ("prompt" , prompt)
     message_history = ChatMessageHistory()
     memory = ConversationBufferMemory(
         memory_key="chat_history",
@@ -148,7 +139,7 @@ async def init():
     )
     
     # Save the metadata and texts in the user session
-    cl.user_session.set("metadatas", metadatas)
+    # cl.user_session.set("metadatas", metadatas)
     cl.user_session.set("texts", texts)
     # Let the user know that the system is ready
     msg.content = f"`{file.name}` processed. You can now ask questions!"
@@ -167,14 +158,14 @@ async def process_response(res:cl.Message):
     cb.answer_reached = True
     print("in retrieval QA")
     #res.content to extract the content from chainlit.message.Message
-    system_template = """ <s> [INST] You are a music assistant. Use the following user information to recommend suitable song for them [/INST]"""
-    user_prompt = system_template + res.content + " </s>"
-    print(f"res : {user_prompt}")
-    response = await chain.acall(user_prompt, callbacks=[cb])
+    print(f"res : {res.content}")
+    response = await chain.acall(res.content, callbacks=[cb])
+
     # response = await chain.acall(input, callbacks=[cb])
     
-    print(f"response: {response}")
-    answer = response["answer"] #quan trong dung de lay cau tra loi
+    answer = response["answer"]
+    print(f"response: {answer}")
+     #quan trong dung de lay cau tra loi
 
     #Retrieve source document
     sources = response["source_documents"]
