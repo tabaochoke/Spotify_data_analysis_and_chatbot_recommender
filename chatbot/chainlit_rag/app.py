@@ -1,5 +1,5 @@
 #import required libraries
-from image import *
+# from image import *
 from langchain.embeddings import HuggingFaceEmbeddings,HuggingFaceBgeEmbeddings
 from langchain.text_splitter import RecursiveCharacterTextSplitter , CharacterTextSplitter
 from langchain.vectorstores import Qdrant
@@ -49,7 +49,7 @@ from PIL import Image
 from transformers import BlipProcessor, BlipForConditionalGeneration
 
 text_splitter = CharacterTextSplitter(
-    separator="Song",
+    separator="\n",
     chunk_size=1,
     chunk_overlap=1,
     length_function=len,
@@ -84,6 +84,7 @@ async def init():
     # print ("length_Text" , len (texts))
     # Create metadata for each chunk
     metadatas = [{"source": f"{i}-pl"} for i in range(len(texts))]
+    print ("metadatas" , metadatas)
     # Create a Chroma vector store
     model_id = "BAAI/bge-small-en-v1.5"
     # model_id = "BAAI/bge-large-en-v1.5"
@@ -110,13 +111,13 @@ async def init():
     )
     # Create a chain that uses the Chroma vector store
     repo_id = 'mistralai/Mixtral-8x7B-Instruct-v0.1'
-    llm = HuggingFaceHub(repo_id=repo_id, model_kwargs={"temperature": 0.5, "max_length": 5000})
+    llm = HuggingFaceHub(repo_id=repo_id, model_kwargs={"temperature": 0.9, "max_length": 10000})
 
     template = (
-            "You are a helpful AI music assistant that recommend song for user.Using only song provided, do not make up any song. Give the user genius URL of the song after you recommend "
-            "Combine the chat history and follow up question into "
-            "a standalone question. Chat History: {chat_history}"
-            "Follow up question: {question} "
+            "<s> [INST] You are a helpful AI music assistant that recommend song for user, give the lyric and detail information for the song"
+            "You need to use the chat history. "
+            "Chat History: {chat_history} "
+            "to answer the following user question. User Question: {question} [/INST] "
         )
     prompt = PromptTemplate.from_template(template)
     print ("prompt" , prompt)
@@ -131,7 +132,7 @@ async def init():
     chain = ConversationalRetrievalChain.from_llm(
         llm = llm,
         condense_question_prompt = prompt,
-        chain_type="stuff",
+        # chain_type="stuff",
         retriever=compression_retriever,
         memory=memory,
         return_source_documents=True,
@@ -154,7 +155,7 @@ async def process_response(res:cl.Message):
     # retrieve the retrieval chain initialized for the current session
     chain = cl.user_session.get("chain") 
     # Chainlit callback handler
-    cb = cl.AsyncLangchainCallbackHandler(stream_final_answer=True, answer_prefix_tokens=["FINAL", "ANSWER"])
+    cb = cl.LangchainCallbackHandler(stream_final_answer=True, answer_prefix_tokens=["FINAL", "ANSWER"])
     cb.answer_reached = True
     print("in retrieval QA")
     #res.content to extract the content from chainlit.message.Message
@@ -162,7 +163,6 @@ async def process_response(res:cl.Message):
     response = await chain.acall(res.content, callbacks=[cb])
 
     # response = await chain.acall(input, callbacks=[cb])
-    
     answer = response["answer"]
     print(f"response: {answer}")
      #quan trong dung de lay cau tra loi
