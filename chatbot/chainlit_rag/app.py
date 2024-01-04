@@ -32,7 +32,7 @@ from configparser import ConfigParser
 env_config = ConfigParser()
 os.environ["HUGGINGFACEHUB_API_TOKEN"] = HUGGINGFACEHUB_API_TOKEN
 
-
+import torch
 # Retrieve the cohere api key from the environmental variables
 def read_config(parser: ConfigParser, location: str) -> None:
     assert parser.read(location), f"Could not read config {location}"
@@ -86,10 +86,10 @@ async def init():
     metadatas = [{"source": f"{i}-pl"} for i in range(len(texts))]
     print ("metadatas" , metadatas)
     # Create a Chroma vector store
+    # model_id = "intfloat/e5-mistral-7b-instruct"
     model_id = "BAAI/bge-small-en-v1.5"
-    # model_id = "BAAI/bge-large-en-v1.5"
     # model_id = "WhereIsAI/UAE-Large-V1"
-    embeddings = HuggingFaceBgeEmbeddings(model_name= model_id,model_kwargs = {"device":"cpu"})
+    embeddings = HuggingFaceBgeEmbeddings(model_name= model_id,model_kwargs = {"device":"cuda"})
     cl.user_session.set("embeddings", embeddings)
     #
     # Store the embeddings in the user session
@@ -111,10 +111,10 @@ async def init():
     )
     # Create a chain that uses the Chroma vector store
     repo_id = 'mistralai/Mixtral-8x7B-Instruct-v0.1'
-    llm = HuggingFaceHub(repo_id=repo_id, model_kwargs={"temperature": 0.9, "max_length": 10000})
+    llm = HuggingFaceHub(repo_id=repo_id, model_kwargs={"temperature": 0.5, "max_length": 4096})
 
     template = (
-            "<s> [INST] You are a helpful AI music assistant that recommend song for user, give the lyric and detail information for the song"
+            "<s> [INST] You are an AI music assitant, please answer user question by using only the provided data.Do not create any fake information not in the data."
             "You need to use the chat history. "
             "Chat History: {chat_history} "
             "to answer the following user question. User Question: {question} [/INST] "
@@ -132,7 +132,7 @@ async def init():
     chain = ConversationalRetrievalChain.from_llm(
         llm = llm,
         condense_question_prompt = prompt,
-        # chain_type="stuff",
+        chain_type="stuff",
         retriever=compression_retriever,
         memory=memory,
         return_source_documents=True,
