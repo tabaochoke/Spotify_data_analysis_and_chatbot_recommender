@@ -4,8 +4,12 @@
 - 21120255 - Nguyễn Đặng Nhật Huy
 - 21120278 - Phùng Đoàn Khôi
 - 21120293 - Lê Nguyễn Trọng Nghĩa
-## Dataset: Trong data, thu thập thông qua API Spotify, Genius, Genius - Song Lyrics của RapidAPI
-## Các liên kết liên quan: 
+## Dataset: Collect Data by using API Spotify, Genius, Genius - Song Lyrics from RapidAPI
+## To run chatbot :
+### pip install requirements.txt
+### cd chatbot/chainlit_rag
+### chainlit run app.py
+## Related References 
 + https://trello.com/b/F0hQBD9R/projectkhdl)https://trello.com/b/F0hQBD9R/projectkhdl
 + Spotify API: https://developer.spotify.com/documentation/web-api
 + Genius API: https://docs.genius.com
