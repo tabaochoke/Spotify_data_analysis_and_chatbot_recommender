@@ -6,9 +6,9 @@
 - 21120293 - Lê Nguyễn Trọng Nghĩa
 ## Dataset: Collect Data by using API Spotify, Genius, Genius - Song Lyrics from RapidAPI
 ## To run chatbot :
-### pip install requirements.txt
-### cd chatbot/chainlit_rag
-### chainlit run app.py
+### 1. pip install requirements.txt
+### 2. cd chatbot/chainlit_rag
+### 3. chainlit run app.py
 ## Related References 
 + https://trello.com/b/F0hQBD9R/projectkhdl)https://trello.com/b/F0hQBD9R/projectkhdl
 + Spotify API: https://developer.spotify.com/documentation/web-api
